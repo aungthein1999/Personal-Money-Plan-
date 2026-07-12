@@ -7,35 +7,45 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Money Plan">
 <meta name="theme-color" content="#1F4E79">
-<title>Thein — Money Plan</title>
+<title>Thein — Money Plan Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Myanmar Text", Padauk, "Noto Sans Myanmar", sans-serif; background: #f4f6f9; color: #222; line-height: 1.9; }
   header { background: #1F4E79; color: #fff; padding: 14px 16px; }
   header h1 { font-size: 18px; }
   header p { font-size: 12px; opacity: .85; }
-  nav { display: flex; background: #fff; border-bottom: 2px solid #e0e4ea; position: sticky; top: 0; z-index: 5; overflow-x: auto; }
-  nav button { flex: 1; min-width: 100px; padding: 12px 6px; border: none; background: none; font-family: inherit; font-size: 13px; cursor: pointer; color: #555; border-bottom: 3px solid transparent; white-space: nowrap; }
-  nav button.on { color: #1F4E79; font-weight: bold; border-bottom-color: #1F4E79; }
+  nav { display: flex; background: #fff; border-bottom: 2px solid #e0e4ea; position: sticky; top: 0; z-index: 5; }
+  nav button { flex: 1; padding: 13px 4px; border: none; background: none; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; color: #555; border-bottom: 3px solid transparent; white-space: nowrap; }
+  nav button.on { color: #1F4E79; border-bottom-color: #1F4E79; }
   main { max-width: 860px; margin: 0 auto; padding: 14px; }
   section { display: none; }
   section.on { display: block; }
   .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .card h2 { font-size: 15px; color: #1F4E79; margin-bottom: 10px; }
   label { font-size: 12px; color: #666; display: block; margin-top: 8px; }
-  input, select { width: 100%; padding: 9px; border: 1px solid #ccd3dd; border-radius: 7px; font-family: inherit; font-size: 14px; background: #fff; }
-  input:focus, select:focus { outline: 2px solid #1F4E79; }
+  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #ccd3dd; border-radius: 7px; font-family: inherit; font-size: 14px; background: #fff; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #1F4E79; }
+  .overlay { position: fixed; inset: 0; background: rgba(15,30,50,.78); z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .overlay.show { display: flex; }
+  .overlay .card { width: 100%; max-width: 420px; margin: 0; }
+  header .hedit { float: right; background: rgba(255,255,255,.15); border: none; color: #fff; border-radius: 6px; padding: 2px 10px; font-family: inherit; font-size: 12px; cursor: pointer; }
   .row { display: flex; gap: 8px; }
   .row > div { flex: 1; }
+  .seg { display: flex; gap: 6px; margin-bottom: 4px; }
+  .seg button { flex: 1; padding: 10px; border: 1.5px solid #ccd3dd; background: #fff; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; }
+  .seg button.onOut { background: #fdecec; border-color: #d33; color: #d33; }
+  .seg button.onIn { background: #e8f6ee; border-color: #2e9e5b; color: #2e9e5b; }
   button.big { width: 100%; margin-top: 12px; padding: 12px; background: #1F4E79; color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 15px; font-weight: bold; cursor: pointer; }
   button.big:active { background: #163a5c; }
   #fMsg { font-size: 13px; margin-top: 8px; min-height: 18px; }
   #fMsg.err { color: #d33; }
   #fMsg.ok { color: #2e9e5b; }
   .stat { display: flex; gap: 8px; margin-bottom: 14px; }
-  .stat .card { flex: 1; margin: 0; text-align: center; padding: 10px 6px; }
-  .stat .num { font-size: 17px; font-weight: bold; color: #1F4E79; }
-  .stat .lbl { font-size: 11px; color: #777; }
+  .stat .card { flex: 1; margin: 0; text-align: center; padding: 10px 4px; }
+  .stat .num { font-size: 15px; font-weight: bold; color: #1F4E79; }
+  .stat .num.grn { color: #2e9e5b; }
+  .stat .lbl { font-size: 10px; color: #777; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: #1F4E79; color: #fff; padding: 8px 6px; text-align: left; font-size: 12px; }
   td { padding: 8px 6px; border-bottom: 1px solid #eef1f5; vertical-align: top; }
@@ -46,55 +56,70 @@
   .bar { background: #e8ecf2; border-radius: 6px; height: 8px; overflow: hidden; margin-top: 3px; }
   .bar i { display: block; height: 100%; background: #2e9e5b; border-radius: 6px; }
   .bar i.over { background: #d33; }
+  .goalwrap { background: #e8ecf2; border-radius: 10px; height: 22px; overflow: hidden; margin-top: 6px; position: relative; }
+  .goalwrap i { display: block; height: 100%; background: linear-gradient(90deg,#2e9e5b,#4fc47f); border-radius: 10px; }
+  .goalwrap span { position: absolute; top: 0; left: 0; right: 0; text-align: center; font-size: 12px; font-weight: bold; color: #1F4E79; line-height: 22px; }
   .pos { color: #2e9e5b; font-weight: bold; }
   .neg { color: #d33; font-weight: bold; }
   .note { font-size: 12px; color: #888; margin-top: 8px; }
-  .tip { background: #fff8e1; border-left: 4px solid #f0b429; padding: 10px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; }
-  input.mini { width: 110px; padding: 6px; text-align: right; }
-  .chk { width: 20px; height: 20px; }
-  .meal td:first-child { font-weight: bold; white-space: nowrap; }
-  ol { padding-left: 20px; font-size: 13px; }
-  button.csv { margin-top: 10px; padding: 10px; width: 100%; background: #fff; color: #1F4E79; border: 1.5px solid #1F4E79; border-radius: 8px; font-family: inherit; cursor: pointer; font-weight: bold; }
+  input.mini { width: 120px; padding: 6px; text-align: right; }
+  .chartbox { position: relative; height: 230px; margin-top: 8px; }
+  button.csv { margin-top: 8px; padding: 10px; width: 100%; background: #fff; color: #1F4E79; border: 1.5px solid #1F4E79; border-radius: 8px; font-family: inherit; cursor: pointer; font-weight: bold; }
+  .total { font-size: 20px; font-weight: bold; color: #1F4E79; }
 </style>
 </head>
 <body>
 <header>
-  <h1>💰 Thein ရဲ့ Money Plan</h1>
-  <p>စည်းကမ်း — ငွေဝင်ရင် ၅ သိန်း Bank အရင်။ Pay ကုန်ရင် ကုန်ပြီ။</p>
+  <button class="hedit" onclick="openSetup()">✎ ပြင်မယ်</button>
+  <h1><span id="hName">💰 Money Plan</span> <span style="font-size:11px;background:#f0b429;color:#1F4E79;border-radius:6px;padding:2px 6px;vertical-align:middle">PRO</span></h1>
+  <p id="hRules">စည်းကမ်း — ဝင်ငွေရရင် စုငွေအရင်ဖယ်။</p>
 </header>
 <nav>
-  <button class="on" onclick="tab(0,this)">📝 နေ့စဉ်မှတ်တမ်း</button>
-  <button onclick="tab(1,this)">📊 လစဉ်အနှစ်ချုပ်</button>
-  <button onclick="tab(2,this)">🍳 Meal Plan</button>
-  <button onclick="tab(3,this)">🛒 ဈေးဝယ်စာရင်း</button>
+  <button class="on" onclick="tab(0,this)">📝 မှတ်တမ်း</button>
+  <button onclick="tab(1,this)">📊 အနှစ်ချုပ်</button>
+  <button onclick="tab(2,this)">💎 ပိုက်ဆံအိတ်</button>
 </nav>
+<div class="overlay" id="setupOv">
+  <div class="card">
+    <h2>👋 မင်္ဂလာပါ — ကိုယ့် app ကို ကိုယ်စိတ်ကြိုက်လုပ်ပါ</h2>
+    <label>နာမည် (ကြိုက်တာရေးပါ)</label>
+    <input type="text" id="suName" placeholder="ဥပမာ — Thein">
+    <label>ကိုယ့်စည်းကမ်း (Rules)</label>
+    <textarea id="suRules" rows="3" placeholder="ဥပမာ — ငွေဝင်ရင် ၅ သိန်း Bank အရင်။ Pay ကုန်ရင် ကုန်ပြီ။"></textarea>
+    <button class="big" onclick="saveUser()">သိမ်းမယ် ✓</button>
+    <div class="note">နောက်မှပြင်ချင်ရင် — အပေါ်ညာဘက်က "✎ ပြင်မယ်" ကိုနှိပ်ပါ။</div>
+  </div>
+</div>
 <main>
 
 <!-- ============ TAB 0: DAILY LOG ============ -->
 <section class="on" id="s0">
   <div class="stat">
-    <div class="card"><div class="num" id="todayTotal">0</div><div class="lbl">ဒီနေ့သုံးငွေ (ကျပ်)</div></div>
-    <div class="card"><div class="num" id="monthTotal">0</div><div class="lbl">ဒီလစုစုပေါင်း (ကျပ်)</div></div>
+    <div class="card"><div class="num" id="todayTotal">0</div><div class="lbl">ဒီနေ့ထွက် (ကျပ်)</div></div>
+    <div class="card"><div class="num" id="monthTotal">0</div><div class="lbl">ဒီလထွက် (ကျပ်)</div></div>
+    <div class="card"><div class="num grn" id="monthIn">0</div><div class="lbl">ဒီလဝင် (ကျပ်)</div></div>
   </div>
   <div class="card">
-    <h2>သုံးငွေ မှတ်မယ်</h2>
+    <h2>မှတ်မယ်</h2>
+    <div class="seg">
+      <button id="segOut" class="onOut" onclick="setType('out')">➖ ထွက်ငွေ</button>
+      <button id="segIn" onclick="setType('in')">➕ ဝင်ငွေ</button>
+    </div>
     <div class="row">
       <div><label>ရက်စွဲ</label><input type="date" id="fDate"></div>
       <div><label>အမျိုးအစား</label><select id="fCat"></select></div>
     </div>
     <div class="row">
       <div><label>ဘာအတွက်လဲ</label><input type="text" id="fItem" placeholder="ဥပမာ — မုန့်ဟင်းခါး"></div>
-      <div><label>ကျသင့်ငွေ (ကျပ်)</label><input type="number" id="fAmt" placeholder="3000" inputmode="numeric"></div>
+      <div><label>ပမာဏ (ကျပ်)</label><input type="number" id="fAmt" placeholder="3000" inputmode="numeric"></div>
     </div>
     <button class="big" onclick="addExp()">+ မှတ်မယ်</button>
     <div id="fMsg"></div>
-    <div class="note">💡 သုံးပြီးတာနဲ့ ချက်ချင်းမှတ်ပါ — ညနေကျမှမှတ်ရင် မေ့တတ်တယ်။</div>
   </div>
   <div class="card">
     <h2>ဒီလ မှတ်တမ်းများ</h2>
     <table id="logTable"><thead><tr><th>အကြောင်းအရာ</th><th>အမျိုးအစား</th><th style="text-align:right">ကျပ်</th><th></th></tr></thead><tbody></tbody></table>
-    <button class="csv" onclick="exportCSV()">⬇ CSV Export (Excel မှာဖွင့်လို့ရ / Backup)</button>
-    <div class="note">ဖျက်ချင်ရင် ✕ ကို ၂ ခါနှိပ်ပါ။ Data က ဒီဖုန်း/browser ထဲမှာ အလိုအလျောက်သိမ်းတယ်။</div>
+    <div class="note">ဖျက်ချင်ရင် ✕ ကို ၂ ခါနှိပ်ပါ။</div>
   </div>
 </section>
 
@@ -104,100 +129,132 @@
     <h2>လ ရွေးပါ</h2>
     <input type="month" id="sMonth" onchange="render()">
     <div class="row" style="margin-top:6px">
-      <div><label>လစဉ်ဝင်ငွေ</label><input type="number" id="sIncome" onchange="saveCfg()"></div>
+      <div><label>လစဉ်ဝင်ငွေ (စီစဉ်ထား)</label><input type="number" id="sIncome" onchange="saveCfg()"></div>
       <div><label>စုငွေ (အရင်ဖယ်)</label><input type="number" id="sSave" onchange="saveCfg()"></div>
     </div>
     <div class="note" id="spendable"></div>
   </div>
   <div class="card">
+    <h2>သုံးငွေ ခွဲခြမ်းပုံ</h2>
+    <div class="chartbox"><canvas id="pieC"></canvas></div>
+    <div class="note" id="pieNote"></div>
+  </div>
+  <div class="card">
     <h2>Budget နဲ့ တကယ်သုံးတာ</h2>
     <table id="budTable"><thead><tr><th>အမျိုးအစား</th><th style="text-align:right">Budget</th><th style="text-align:right">သုံးပြီး</th><th style="text-align:right">ကျန်</th></tr></thead><tbody></tbody></table>
-    <div class="note">Budget ကွက်ထဲ နှိပ်ပြီး ကိုယ်တိုင်ပြင်လို့ရတယ်။</div>
+    <div class="note">Budget ကွက်ထဲ နှိပ်ပြီး ပြင်လို့ရတယ်။</div>
   </div>
   <div class="card" id="verdict"></div>
 </section>
 
-<!-- ============ TAB 2: MEAL PLAN ============ -->
+<!-- ============ TAB 2: WEALTH ============ -->
 <section id="s2">
-  <div class="tip">📌 <b>အဓိကနည်းလမ်း</b> — ညစာတိုင်း <b>၂ ပွဲစာ</b> ချက်ပါ။ ၁ ပွဲ ညစား၊ ၁ ပွဲ မနက်ဖြန် ထမင်းချိုင့်။ ဒါဆို တစ်နေ့ တစ်ခါပဲ ချက်ရတယ်။</div>
   <div class="card">
-    <h2>၇ ရက်စာ အစီအစဉ်</h2>
-    <table class="meal">
-      <thead><tr><th>နေ့</th><th>မနက်စာ</th><th>နေ့လယ် (ချိုင့်)</th><th>ညစာ (၂ ပွဲစာ)</th></tr></thead>
-      <tbody>
-        <tr><td>တနင်္ဂနွေ</td><td>အကြိုက်</td><td>အပြင်စာ (အပတ်စဉ် treat)</td><td>ကြက်သားအာလူးဟင်း + ထမင်း</td></tr>
-        <tr><td>တနင်္လာ</td><td>ကြက်ဥကြော် + ပေါင်မုန့် + ကော်ဖီ</td><td>ကြက်သားဟင်းချိုင့်</td><td>ငါးကြော် + ကန်စွန်းရွက်ကြော်</td></tr>
-        <tr><td>အင်္ဂါ</td><td>Oats + ငှက်ပျောသီး</td><td>ငါးကြော်ချိုင့် + အရွက်</td><td>ဝက်သားအာလူးဟင်း</td></tr>
-        <tr><td>ဗုဒ္ဓဟူး</td><td>ကြက်ဥပြုတ် + ပေါင်မုန့်</td><td>ဝက်သားဟင်းချိုင့်</td><td>ကြက်ဥချဉ်ရည်ဟင်း + ပဲသီးကြော် (မိနစ် ၂၀)</td></tr>
-        <tr><td>ကြာသပတေး</td><td>Oats / မုန့်</td><td>ကြက်ဥဟင်းချိုင့်</td><td>Chicken pasta (ခရမ်းချဉ်သီး sauce)</td></tr>
-        <tr><td>သောကြာ</td><td>ထမင်းကြော် (ထမင်းကျန်)</td><td>Pasta ကျန်</td><td>Fridge ရှင်း ထမင်းကြော် — ကျန်သမျှအကုန်ထည့်</td></tr>
-        <tr><td>စနေ</td><td>အကြိုက်</td><td>Chicken salad</td><td>GF နဲ့ date night — အပြင် / အတူချက် (GF budget ထဲက)</td></tr>
-      </tbody>
-    </table>
+    <h2>💎 ငါ့ပိုက်ဆံအိတ် စုစုပေါင်း</h2>
+    <div class="total" id="wTotal">0 ကျပ်</div>
+    <label>Bank ထဲမှာ</label><input type="number" id="wBank" onchange="setW('bank',this)">
+    <label>ငွေသား (လက်ထဲ/အိမ်မှာ)</label><input type="number" id="wCash" onchange="setW('cash',this)">
+    <label>ရွှေ (ကျပ်တန်ဖိုး)</label><input type="number" id="wGold" onchange="setW('gold',this)">
+    <label>အခြား</label><input type="number" id="wOther" onchange="setW('other',this)">
+    <div class="note">လကုန်တိုင်း တစ်ခါ update လုပ်ပြီး "သိမ်းမယ်" နှိပ်ပါ — တိုးတက်မှုမျဉ်း ပေါ်လာမယ်။</div>
+    <button class="big" onclick="snapNow()">📌 ဒီလ အခြေအနေ သိမ်းမယ်</button>
+    <div id="wMsg" class="note"></div>
   </div>
   <div class="card">
-    <h2>တနင်္ဂနွေ Meal Prep (မိနစ် ၃၀)</h2>
-    <ol>
-      <li>ကြက်သွန်နီ/ဖြူ/ချင်း အများကြီးထောင်းပြီး ဂျာထဲသိမ်း — ဟင်းတိုင်းရဲ့အခြေခံ။ နေ့တိုင်း မထောင်းရတော့ဘူး။</li>
-      <li>အသားတွေကို တစ်ရက်စာစီ ထုပ်ခွဲပြီး freezer ထဲ။ ချက်မယ့်နေ့မနက် fridge အောက်ဆင့်ကို ချထား။</li>
-      <li>ထမင်း ၂ ရက်စာ တစ်ခါပေါင်း — ကျန်ရင် ထမင်းကြော်အတွက်။</li>
-      <li>ဟင်းသီးဟင်းရွက် ဆေးပြီး ခွဲသိမ်း — ကြော်ဖို့အသင့်။</li>
-    </ol>
-    <div class="note">အိမ်ချက်တစ်နပ် ≈ ၂,၀၀၀–၃,၀၀၀ ကျပ်။ အပြင်စာတစ်နပ် ≈ ၅,၀၀၀–၁၀,၀၀၀ ကျပ်။ တစ်လဆို သိန်းချီ ကွာတယ်။</div>
-  </div>
-</section>
-
-<!-- ============ TAB 3: GROCERY ============ -->
-<section id="s3">
-  <div class="tip">🛒 ဈေးနှုန်းက နေရာအလိုက်ကွာလို့ ဝယ်ပြီးတိုင်း ဈေးကို ကိုယ်တိုင်ဖြည့်ပါ — ပြီးရင် နေ့စဉ်မှတ်တမ်းထဲမှာ "ဈေးဝယ်/ဟင်းချက်" နဲ့ စုစုပေါင်းသွင်းပါ။</div>
-  <div class="card">
-    <h2>① ပထမတစ်ခါတည်း ဝယ်ရန် (တစ်လခံ ကုန်ခြောက်)</h2>
-    <table id="gPantry"></table>
-    <div class="note">စုစုပေါင်း — <b id="gPantryTotal">0</b> ကျပ်</div>
+    <h2>🎯 ပန်းတိုင်</h2>
+    <label>ပန်းတိုင်ပမာဏ (ကျပ်)</label><input type="number" id="wGoal" onchange="setGoal(this)">
+    <div class="goalwrap"><i id="goalBar" style="width:0%"></i><span id="goalTxt"></span></div>
+    <div class="note">ဥပမာ — ၁ နှစ်အတွင်း သိန်း ၁၂၀ (12,000,000)။</div>
   </div>
   <div class="card">
-    <h2>② အပတ်စဉ် တနင်္ဂနွေတိုင်း ဝယ်ရန် (လတ်ဆတ်တာ)</h2>
-    <table id="gWeekly"></table>
-    <div class="note">စုစုပေါင်း — <b id="gWeeklyTotal">0</b> ကျပ် · အပတ်သစ်တိုင်း ✓ တွေပြန်ဖြုတ်ပြီး သုံးပါ။</div>
+    <h2>📈 တိုးတက်မှု</h2>
+    <div class="chartbox"><canvas id="lineC"></canvas></div>
+    <div class="note" id="lineNote"></div>
+  </div>
+  <div class="card">
+    <h2>💾 Backup</h2>
+    <button class="csv" onclick="exportJSON()">⬇ Backup ထုတ်မယ် (JSON)</button>
+    <button class="csv" onclick="document.getElementById('impFile').click()">⬆ Backup ပြန်သွင်းမယ်</button>
+    <input type="file" id="impFile" accept=".json" style="display:none" onchange="importJSON(this)">
+    <button class="csv" onclick="exportCSV()">⬇ CSV ထုတ်မယ် (Excel အတွက်)</button>
+    <div class="note">လတိုင်း Backup ထုတ်ပြီး ဘေးကင်းတဲ့နေရာ (email/drive) မှာ သိမ်းထားပါ။ ဖုန်းပြောင်းရင် Backup ပြန်သွင်းရုံပဲ။</div>
   </div>
 </section>
 
 </main>
 <script>
 var CATS = ["ဈေးဝယ်/ဟင်းချက်","အပြင်စာ","GF/ပျော်ပွဲ","အလှူ","အဝတ်/ကိုယ်ရေး","သွားလာစရိတ်","အိမ်စရိတ်","ကျန်းမာရေး","အခြား"];
+var INCATS = ["လစာ","လုပ်ငန်းဝင်ငွေ","အခြားဝင်ငွေ"];
 var DEF_BUD = [300000,200000,300000,150000,150000,100000,500000,100000,200000];
-var PANTRY = [["ဆန်","၁ အိတ်"],["ဟင်းချက်ဆီ","၁ ပိဿာ"],["ဆား","၁ ထုပ်"],["သကြား","½ ပိဿာ"],["ငံပြာရည်","၁ ပုလင်း"],["ပဲငံပြာရည် (soy)","၁ ပုလင်း"],["ငါးပိ","ကြိုက်ရင်"],["ငရုတ်သီးမှုန့်","၁ ထုပ်"],["နနွင်းမှုန့်","၁ ထုပ်"],["ဟင်းခတ်မှုန့်","၁ ထုပ်"],["ကြက်သွန်နီ","၁ ပိဿာ"],["ကြက်သွန်ဖြူ","၃-၄ ခြမ်း"],["ချင်း","၁ တက်"],["ငရုတ်သီးခြောက်","အနည်း"],["ကြက်ဥ","၃၀ လုံး"],["Oats","၁ ထုပ်ကြီး"],["ကော်ဖီ / လက်ဖက်","၁ လစာ"],["Pasta + Tomato sauce","၂ ထုပ် + ၁ ဗူး"]];
-var WEEKLY = [["ကြက်သား","၁ ပိဿာ"],["ဝက်သား","½ ပိဿာ"],["ငါး (ကြော်စရာ)","၂-၃ ကောင်"],["ကန်စွန်းရွက် / ဟင်းရွက်","၃ စည်း"],["ပဲသီး","½ ပိဿာ"],["ခရမ်းချဉ်သီး","½ ပိဿာ"],["အာလူး","½ ပိဿာ"],["သခွားသီး / Salad","အနည်း"],["ပေါင်မုန့်","၁ လုံး"],["ငှက်ပျောသီး / အသီး","၁ ဖီး"]];
 
 function load(k,d){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 var exps = load("tm_exps",[]);
 var cfg = load("tm_cfg",{income:3000000,saveAmt:1000000,budgets:DEF_BUD.slice()});
-var groc = load("tm_groc",{});
+var wealth = load("tm_wealth",{items:{bank:0,cash:0,gold:0,other:0},goal:12000000,snaps:[]});
 var armDel = -1;
+var entryType = "out";
+var pieChart = null, lineChart = null;
+var user = load("tm_user",null);
+
+/* ---------- user setup ---------- */
+function openSetup(){
+  document.getElementById("suName").value = (user&&user.name)?user.name:"";
+  document.getElementById("suRules").value = (user&&user.rules)?user.rules:"";
+  document.getElementById("setupOv").classList.add("show");
+}
+function saveUser(){
+  var n=document.getElementById("suName").value.trim();
+  var ru=document.getElementById("suRules").value.trim();
+  if(!n) n="My";
+  user={name:n,rules:ru};
+  save("tm_user",user);
+  applyUser();
+  document.getElementById("setupOv").classList.remove("show");
+}
+function applyUser(){
+  if(!user) return;
+  document.getElementById("hName").textContent="💰 "+user.name+" ရဲ့ Money Plan";
+  document.getElementById("hRules").textContent=user.rules||"စည်းကမ်း — ဝင်ငွေရရင် စုငွေအရင်ဖယ်။";
+  document.title=user.name+" — Money Plan";
+}
 
 function fmt(n){ return (n||0).toLocaleString("en-US"); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function msg(t,cls){ var m=document.getElementById("fMsg"); m.textContent=t; m.className=cls; }
+function isOut(e){ return e.type!=="in"; }
 
 function tab(i,btn){
   var secs=document.querySelectorAll("section"), btns=document.querySelectorAll("nav button");
   for(var j=0;j<secs.length;j++){ secs[j].classList.toggle("on",j===i); btns[j].classList.toggle("on",j===i); }
+  drawCharts();
 }
 
-/* ---------- daily log ---------- */
+function populateCats(list){
+  var sel=document.getElementById("fCat");
+  sel.innerHTML="";
+  for(var i=0;i<list.length;i++){ var o=document.createElement("option"); o.value=list[i]; o.textContent=list[i]; sel.appendChild(o); }
+}
+function setType(t){
+  entryType=t;
+  document.getElementById("segOut").className = (t==="out")?"onOut":"";
+  document.getElementById("segIn").className = (t==="in")?"onIn":"";
+  populateCats(t==="out"?CATS:INCATS);
+}
+
+/* ---------- log ---------- */
 function addExp(){
   var d=document.getElementById("fDate").value;
   var cat=document.getElementById("fCat").value;
   var item=document.getElementById("fItem").value.trim();
   var amt=parseInt(document.getElementById("fAmt").value,10);
   if(!d){ msg("⚠ ရက်စွဲရွေးပါ","err"); return; }
-  if(!amt||amt<=0){ msg("⚠ ကျသင့်ငွေထည့်ပါ","err"); return; }
-  exps.push({d:d,cat:cat,item:item||cat,amt:amt});
+  if(!amt||amt<=0){ msg("⚠ ပမာဏထည့်ပါ","err"); return; }
+  exps.push({d:d,cat:cat,item:item||cat,amt:amt,type:entryType});
   save("tm_exps",exps);
   document.getElementById("fItem").value="";
   document.getElementById("fAmt").value="";
-  msg("✓ မှတ်ပြီးပြီ — "+fmt(amt)+" ကျပ် ("+cat+")","ok");
+  msg((entryType==="out"?"✓ ထွက်ငွေမှတ်ပြီး — ":"✓ ဝင်ငွေမှတ်ပြီး — ")+fmt(amt)+" ကျပ် ("+cat+")","ok");
   armDel=-1;
   render();
 }
@@ -205,14 +262,6 @@ function delExp(i){
   if(armDel===i){ exps.splice(i,1); save("tm_exps",exps); armDel=-1; }
   else { armDel=i; }
   render();
-}
-function exportCSV(){
-  var rows=[["ရက်စွဲ","အမျိုးအစား","အကြောင်းအရာ","ကျသင့်ငွေ"]];
-  for(var i=0;i<exps.length;i++){ var e=exps[i]; rows.push([e.d,e.cat,(e.item||"").replace(/,/g," "),e.amt]); }
-  var csv="﻿"+rows.map(function(r){return r.join(",");}).join("\n");
-  var a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-  a.download="expenses_backup.csv"; a.click();
 }
 
 /* ---------- summary ---------- */
@@ -225,43 +274,109 @@ function setBud(i,el){
   cfg.budgets[i]=parseInt(el.value,10)||0; save("tm_cfg",cfg); render();
 }
 
-/* ---------- grocery ---------- */
-function grocTable(id,items,prefix,totalId){
-  var t=document.getElementById(id);
-  var h="<thead><tr><th></th><th>ပစ္စည်း</th><th>ပမာဏ</th><th style='text-align:right'>ဈေး (ဖြည့်ရန်)</th></tr></thead><tbody>";
-  var total=0;
-  for(var i=0;i<items.length;i++){
-    var key=prefix+i, g=groc[key]||{};
-    total+=(g.price||0);
-    h+="<tr><td><input type='checkbox' class='chk' "+(g.done?"checked":"")+" onchange='setGroc(\""+key+"\",\"done\",this.checked)'></td>";
-    h+="<td"+(g.done?" style='color:#aaa;text-decoration:line-through'":"")+">"+items[i][0]+"</td><td style='font-size:12px;color:#777'>"+items[i][1]+"</td>";
-    h+="<td style='text-align:right'><input type='number' class='mini' placeholder='0' value='"+(g.price||"")+"' onchange='setGroc(\""+key+"\",\"price\",parseInt(this.value,10)||0)'></td></tr>";
-  }
-  t.innerHTML=h+"</tbody>";
-  document.getElementById(totalId).textContent=fmt(total);
+/* ---------- wealth ---------- */
+function setW(k,el){
+  wealth.items[k]=parseInt(el.value,10)||0; save("tm_wealth",wealth); render();
 }
-function setGroc(key,field,val){
-  if(!groc[key]) groc[key]={};
-  groc[key][field]=val; save("tm_groc",groc);
-  grocTable("gPantry",PANTRY,"p","gPantryTotal");
-  grocTable("gWeekly",WEEKLY,"w","gWeeklyTotal");
+function setGoal(el){
+  wealth.goal=parseInt(el.value,10)||0; save("tm_wealth",wealth); render();
+}
+function wTotal(){
+  var it=wealth.items; return (it.bank||0)+(it.cash||0)+(it.gold||0)+(it.other||0);
+}
+function snapNow(){
+  var ym=todayStr().slice(0,7), t=wTotal();
+  var found=false;
+  for(var i=0;i<wealth.snaps.length;i++){ if(wealth.snaps[i].ym===ym){ wealth.snaps[i].total=t; found=true; } }
+  if(!found) wealth.snaps.push({ym:ym,total:t});
+  wealth.snaps.sort(function(a,b){ return a.ym<b.ym?-1:1; });
+  save("tm_wealth",wealth);
+  document.getElementById("wMsg").textContent="✓ "+ym+" — "+fmt(t)+" ကျပ် သိမ်းပြီးပြီ";
+  render();
+}
+
+/* ---------- backup ---------- */
+function dl(name,content,type){
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type:type}));
+  a.download=name; a.click();
+}
+function exportJSON(){
+  dl("money_backup_"+todayStr()+".json", JSON.stringify({v:2,exps:exps,cfg:cfg,wealth:wealth}), "application/json");
+}
+function importJSON(inp){
+  var f=inp.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);
+      if(d.exps){ exps=d.exps; save("tm_exps",exps); }
+      if(d.cfg){ cfg=d.cfg; save("tm_cfg",cfg); }
+      if(d.wealth){ wealth=d.wealth; save("tm_wealth",wealth); }
+      initFields(); render();
+      document.getElementById("wMsg").textContent="✓ Backup ပြန်သွင်းပြီးပြီ";
+    }catch(e){ document.getElementById("wMsg").textContent="⚠ ဖိုင်မှားနေတယ်"; }
+    inp.value="";
+  };
+  r.readAsText(f);
+}
+function exportCSV(){
+  var rows=[["ရက်စွဲ","ဝင်/ထွက်","အမျိုးအစား","အကြောင်းအရာ","ပမာဏ"]];
+  for(var i=0;i<exps.length;i++){ var e=exps[i]; rows.push([e.d,isOut(e)?"ထွက်":"ဝင်",e.cat,(e.item||"").replace(/,/g," "),e.amt]); }
+  dl("expenses_"+todayStr()+".csv","﻿"+rows.map(function(r){return r.join(",");}).join("\n"),"text/csv;charset=utf-8");
+}
+
+/* ---------- charts ---------- */
+var PALETTE=["#1F4E79","#2e9e5b","#f0b429","#d33","#7b5cd6","#e8743b","#13a4b4","#945ecf","#5899DA"];
+function drawCharts(){
+  if(!window.Chart) return;
+  var month=document.getElementById("sMonth").value;
+  /* pie */
+  var labels=[],data=[];
+  for(var i=0;i<CATS.length;i++){
+    var s=0;
+    for(var j=0;j<exps.length;j++){ var e=exps[j]; if(isOut(e)&&e.cat===CATS[i]&&e.d.slice(0,7)===month) s+=e.amt; }
+    if(s>0){ labels.push(CATS[i]); data.push(s); }
+  }
+  if(pieChart){ pieChart.destroy(); pieChart=null; }
+  var pc=document.getElementById("pieC");
+  if(pc && data.length){
+    pieChart=new Chart(pc,{type:"doughnut",data:{labels:labels,datasets:[{data:data,backgroundColor:PALETTE}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{size:11}}}}}});
+    document.getElementById("pieNote").textContent="";
+  } else if(pc){
+    document.getElementById("pieNote").textContent="ဒီလအတွက် ထွက်ငွေမှတ်တမ်း မရှိသေးပါ။";
+  }
+  /* line */
+  if(lineChart){ lineChart.destroy(); lineChart=null; }
+  var lc=document.getElementById("lineC");
+  if(lc && wealth.snaps.length){
+    lineChart=new Chart(lc,{type:"line",data:{labels:wealth.snaps.map(function(s){return s.ym;}),
+      datasets:[{label:"စုစုပေါင်း (ကျပ်)",data:wealth.snaps.map(function(s){return s.total;}),borderColor:"#1F4E79",backgroundColor:"rgba(31,78,121,.1)",fill:true,tension:.3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    document.getElementById("lineNote").textContent="";
+  } else if(lc){
+    document.getElementById("lineNote").textContent="\"ဒီလ အခြေအနေ သိမ်းမယ်\" နှိပ်ရင် ဒီမှာ မျဉ်းပေါ်လာမယ်။";
+  }
 }
 
 /* ---------- render ---------- */
 function render(){
   var month=document.getElementById("sMonth").value;
-  var today=todayStr();
-
-  var curMonth=today.slice(0,7);
-  var tToday=0,tMonth=0;
+  var today=todayStr(), curMonth=today.slice(0,7);
+  var tToday=0,tMonth=0,tIn=0;
   var monthExps=[];
   for(var i=0;i<exps.length;i++){
     var e=exps[i];
-    if(e.d===today) tToday+=e.amt;
-    if(e.d.slice(0,7)===curMonth){ tMonth+=e.amt; monthExps.push({e:e,idx:i}); }
+    if(e.d.slice(0,7)===curMonth){
+      if(isOut(e)){ tMonth+=e.amt; if(e.d===today) tToday+=e.amt; }
+      else tIn+=e.amt;
+      monthExps.push({e:e,idx:i});
+    }
   }
   document.getElementById("todayTotal").textContent=fmt(tToday);
   document.getElementById("monthTotal").textContent=fmt(tMonth);
+  document.getElementById("monthIn").textContent=fmt(tIn);
 
   monthExps.sort(function(a,b){ return a.e.d<b.e.d?1:(a.e.d>b.e.d?-1:0); });
   var tb=document.querySelector("#logTable tbody"), h="", lastDay="";
@@ -269,24 +384,28 @@ function render(){
     var e=monthExps[i].e, idx=monthExps[i].idx;
     if(e.d!==lastDay){
       var dayTotal=0;
-      for(var j=0;j<monthExps.length;j++){ if(monthExps[j].e.d===e.d) dayTotal+=monthExps[j].e.amt; }
+      for(var j=0;j<monthExps.length;j++){ if(monthExps[j].e.d===e.d&&isOut(monthExps[j].e)) dayTotal+=monthExps[j].e.amt; }
       h+="<tr class='day'><td colspan='2'>📅 "+e.d+"</td><td class='amt'>"+fmt(dayTotal)+"</td><td></td></tr>";
       lastDay=e.d;
     }
     var armed=(armDel===idx);
-    h+="<tr><td>"+(e.item||"")+"</td><td style='font-size:12px;color:#777'>"+e.cat+"</td><td class='amt'>"+fmt(e.amt)+"</td><td><button class='del"+(armed?" arm":"")+"' onclick='delExp("+idx+")'>"+(armed?"ဖျက်မယ်!":"✕")+"</button></td></tr>";
+    var amtHtml=isOut(e)?fmt(e.amt):"<span class='pos'>+"+fmt(e.amt)+"</span>";
+    h+="<tr><td>"+(e.item||"")+"</td><td style='font-size:12px;color:#777'>"+e.cat+"</td><td class='amt'>"+amtHtml+"</td><td><button class='del"+(armed?" arm":"")+"' onclick='delExp("+idx+")'>"+(armed?"ဖျက်မယ်!":"✕")+"</button></td></tr>";
   }
   tb.innerHTML=h||"<tr><td colspan='4' style='color:#999'>ဒီလအတွက် မှတ်တမ်းမရှိသေးပါ — အပေါ်ကနေ စမှတ်ပါ။</td></tr>";
 
-  var spent={};
+  /* budget (expenses only, selected month) */
+  var spent={},tSpent=0,tInSel=0;
   for(var i=0;i<CATS.length;i++) spent[CATS[i]]=0;
-  var tSpent=0;
   for(var i=0;i<exps.length;i++){
     var e=exps[i];
-    if(e.d.slice(0,7)===month){ spent[e.cat]=(spent[e.cat]||0)+e.amt; tSpent+=e.amt; }
+    if(e.d.slice(0,7)===month){
+      if(isOut(e)){ spent[e.cat]=(spent[e.cat]||0)+e.amt; tSpent+=e.amt; }
+      else tInSel+=e.amt;
+    }
   }
   var spendable=cfg.income-cfg.saveAmt;
-  document.getElementById("spendable").innerHTML="သုံးလို့ရတဲ့ငွေ (Pay account) — <b>"+fmt(spendable)+" ကျပ်</b>";
+  document.getElementById("spendable").innerHTML="သုံးလို့ရတဲ့ငွေ — <b>"+fmt(spendable)+" ကျပ်</b> · ဒီလ တကယ်ဝင်ငွေ — <b class='pos'>"+fmt(tInSel)+" ကျပ်</b>";
   var bb=document.querySelector("#budTable tbody"), bh="", tBud=0;
   for(var i=0;i<CATS.length;i++){
     var b=cfg.budgets[i]||0, s=spent[CATS[i]]||0, rem=b-s; tBud+=b;
@@ -301,24 +420,41 @@ function render(){
   var left=spendable-tSpent;
   var v=document.getElementById("verdict");
   if(left>=0){
-    v.innerHTML="<h2>ဒီလ လက်ကျန်</h2><div style='font-size:22px' class='pos'>"+fmt(left)+" ကျပ်</div><div class='note'>လကုန်လို့ ကျန်ရင် — Bank ထဲ ထပ်ထည့်ပါ။ ဒါက bonus စုငွေ။ 🎉</div>";
+    v.innerHTML="<h2>ဒီလ လက်ကျန်</h2><div style='font-size:22px' class='pos'>"+fmt(left)+" ကျပ်</div><div class='note'>လကုန်လို့ ကျန်ရင် — Bank ထဲ ထပ်ထည့်ပါ။ 🎉</div>";
   } else {
-    v.innerHTML="<h2>ဒီလ လက်ကျန်</h2><div style='font-size:22px' class='neg'>"+fmt(left)+" ကျပ်</div><div class='note'>⚠️ သုံးလို့ရတာထက် ကျော်နေပြီ — ဘယ်အမျိုးအစား နီနေလဲကြည့်ပြီး ရပ်ပါ။ Bank ကို လုံးဝမထိပါနဲ့။</div>";
+    v.innerHTML="<h2>ဒီလ လက်ကျန်</h2><div style='font-size:22px' class='neg'>"+fmt(left)+" ကျပ်</div><div class='note'>⚠️ ကျော်နေပြီ — ဘယ်အမျိုးအစား နီနေလဲကြည့်ပြီး ရပ်ပါ။ Bank မထိနဲ့။</div>";
   }
 
-  grocTable("gPantry",PANTRY,"p","gPantryTotal");
-  grocTable("gWeekly",WEEKLY,"w","gWeeklyTotal");
+  /* wealth */
+  document.getElementById("wTotal").textContent=fmt(wTotal())+" ကျပ်";
+  var g=wealth.goal||0, t=wTotal();
+  var gp=g>0?Math.min(100,Math.round(t/g*100)):0;
+  document.getElementById("goalBar").style.width=gp+"%";
+  document.getElementById("goalTxt").textContent=gp+"% ("+fmt(t)+" / "+fmt(g)+")";
+
+  drawCharts();
 }
 
-/* ---------- init ---------- */
-(function(){
-  var sel=document.getElementById("fCat");
-  for(var i=0;i<CATS.length;i++){ var o=document.createElement("option"); o.value=CATS[i]; o.textContent=CATS[i]; sel.appendChild(o); }
+function initFields(){
   document.getElementById("fDate").value=todayStr();
   document.getElementById("sMonth").value=todayStr().slice(0,7);
   document.getElementById("sIncome").value=cfg.income;
   document.getElementById("sSave").value=cfg.saveAmt;
+  document.getElementById("wBank").value=wealth.items.bank||0;
+  document.getElementById("wCash").value=wealth.items.cash||0;
+  document.getElementById("wGold").value=wealth.items.gold||0;
+  document.getElementById("wOther").value=wealth.items.other||0;
+  document.getElementById("wGoal").value=wealth.goal||0;
+}
+
+/* ---------- init ---------- */
+(function(){
   if(!cfg.budgets||cfg.budgets.length!==CATS.length) cfg.budgets=DEF_BUD.slice();
+  if(!wealth.items) wealth.items={bank:0,cash:0,gold:0,other:0};
+  if(!wealth.snaps) wealth.snaps=[];
+  populateCats(CATS);
+  initFields();
+  if(user) applyUser(); else document.getElementById("setupOv").classList.add("show");
   render();
 })();
 </script>
