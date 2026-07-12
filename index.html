@@ -24,7 +24,7 @@
   .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .card h2 { font-size: 15px; color: #1F4E79; margin-bottom: 10px; }
   label { font-size: 12px; color: #666; display: block; margin-top: 8px; }
-  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #ccd3dd; border-radius: 7px; font-family: inherit; font-size: 14px; background: #fff; }
+  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #ccd3dd; border-radius: 7px; font-family: inherit; font-size: 16px; background: #fff; }
   input:focus, select:focus, textarea:focus { outline: 2px solid #1F4E79; }
   .overlay { position: fixed; inset: 0; background: rgba(15,30,50,.78); z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px; }
   .overlay.show { display: flex; }
@@ -78,7 +78,7 @@
 <nav>
   <button class="on" onclick="tab(0,this)">📝 မှတ်တမ်း</button>
   <button onclick="tab(1,this)">📊 အနှစ်ချုပ်</button>
-  <button onclick="tab(2,this)">💎 ပိုက်ဆံအိတ်</button>
+  <button onclick="tab(2,this)">💎 Wallet</button>
 </nav>
 <div class="overlay" id="setupOv">
   <div class="card">
@@ -153,7 +153,7 @@
 <!-- ============ TAB 2: WEALTH ============ -->
 <section id="s2">
   <div class="card">
-    <h2>💎 ငါ့ပိုက်ဆံအိတ် စုစုပေါင်း</h2>
+    <h2>💎 Total Wealth — ပိုင်ဆိုင်မှုစုစုပေါင်း</h2>
     <div class="total" id="wTotal">0 ကျပ်</div>
     <label>Bank ထဲမှာ</label><input type="number" id="wBank" onchange="setW('bank',this)">
     <label>ငွေသား (လက်ထဲ/အိမ်မှာ)</label><input type="number" id="wCash" onchange="setW('cash',this)">
@@ -186,10 +186,10 @@
 
 </main>
 <script>
-var CATS = ["ဈေးဝယ်/ဟင်းချက်","အပြင်စာ","GF/ပျော်ပွဲ","အလှူ","အဝတ်/ကိုယ်ရေး","သွားလာစရိတ်","အိမ်စရိတ်","ကျန်းမာရေး","အခြား"];
+var CATS = ["ဈေးဝယ်/ဟင်းချက်","အပြင်စာ","Relationships","အလှူ","အဝတ်/ကိုယ်ရေး","Skincare","သွားလာစရိတ်","ကျန်းမာရေး","အခြား"];
 var INCATS = ["လစာ","လုပ်ငန်းဝင်ငွေ","အခြားဝင်ငွေ"];
 var SAVECATS = ["Bank ထဲ စုငွေ"];
-var DEF_BUD = [300000,200000,300000,150000,150000,100000,500000,100000,200000];
+var DEF_BUD = [300000,200000,300000,150000,150000,150000,100000,100000,200000];
 
 function load(k,d){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
@@ -264,7 +264,7 @@ function addExp(){
     wealth.items.bank=(wealth.items.bank||0)+amt;
     save("tm_wealth",wealth);
     document.getElementById("wBank").value=wealth.items.bank;
-    msg("✓ စုငွေ "+fmt(amt)+" ကျပ် — ပိုက်ဆံအိတ် Bank ထဲ အလိုအလျောက် ထည့်ပြီးပြီ 🎉","ok");
+    msg("✓ စုငွေ "+fmt(amt)+" ကျပ် — Wallet (Bank) ထဲ အလိုအလျောက် ထည့်ပြီးပြီ 🎉","ok");
   } else if(entryType==="in"){
     msg("✓ ဝင်ငွေမှတ်ပြီး — "+fmt(amt)+" ကျပ်။ 💡 မမေ့နဲ့ — စုငွေ အရင်ဖယ်ပြီး 💰 စု နဲ့မှတ်ပါ!","ok");
   } else {
@@ -486,6 +486,14 @@ function initFields(){
 
 /* ---------- init ---------- */
 (function(){
+  /* migrate old category names + reset budgets once for new categories */
+  var mig=false;
+  for(var i=0;i<exps.length;i++){
+    if(exps[i].cat==="GF/ပျော်ပွဲ"){ exps[i].cat="Relationships"; mig=true; }
+    if(exps[i].cat==="အိမ်စရိတ်"){ exps[i].cat="အခြား"; mig=true; }
+  }
+  if(mig) save("tm_exps",exps);
+  if(!cfg.catsV3){ cfg.budgets=DEF_BUD.slice(); cfg.catsV3=true; save("tm_cfg",cfg); }
   if(!cfg.budgets||cfg.budgets.length!==CATS.length) cfg.budgets=DEF_BUD.slice();
   if(!wealth.items) wealth.items={bank:0,cash:0,gold:0,other:0};
   if(!wealth.snaps) wealth.snaps=[];
