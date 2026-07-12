@@ -36,6 +36,7 @@
   .seg button { flex: 1; padding: 10px; border: 1.5px solid #ccd3dd; background: #fff; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; }
   .seg button.onOut { background: #fdecec; border-color: #d33; color: #d33; }
   .seg button.onIn { background: #e8f6ee; border-color: #2e9e5b; color: #2e9e5b; }
+  .seg button.onSave { background: #e8f0fa; border-color: #1F4E79; color: #1F4E79; }
   button.big { width: 100%; margin-top: 12px; padding: 12px; background: #1F4E79; color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 15px; font-weight: bold; cursor: pointer; }
   button.big:active { background: #163a5c; }
   #fMsg { font-size: 13px; margin-top: 8px; min-height: 18px; }
@@ -99,11 +100,13 @@
     <div class="card"><div class="num" id="monthTotal">0</div><div class="lbl">ဒီလထွက် (ကျပ်)</div></div>
     <div class="card"><div class="num grn" id="monthIn">0</div><div class="lbl">ဒီလဝင် (ကျပ်)</div></div>
   </div>
+  <div class="card" id="saveBanner" style="display:none"></div>
   <div class="card">
     <h2>မှတ်မယ်</h2>
     <div class="seg">
-      <button id="segOut" class="onOut" onclick="setType('out')">➖ ထွက်ငွေ</button>
-      <button id="segIn" onclick="setType('in')">➕ ဝင်ငွေ</button>
+      <button id="segOut" class="onOut" onclick="setType('out')">➖ ထွက်</button>
+      <button id="segIn" onclick="setType('in')">➕ ဝင်</button>
+      <button id="segSave" onclick="setType('save')">💰 စု</button>
     </div>
     <div class="row">
       <div><label>ရက်စွဲ</label><input type="date" id="fDate"></div>
@@ -185,6 +188,7 @@
 <script>
 var CATS = ["ဈေးဝယ်/ဟင်းချက်","အပြင်စာ","GF/ပျော်ပွဲ","အလှူ","အဝတ်/ကိုယ်ရေး","သွားလာစရိတ်","အိမ်စရိတ်","ကျန်းမာရေး","အခြား"];
 var INCATS = ["လစာ","လုပ်ငန်းဝင်ငွေ","အခြားဝင်ငွေ"];
+var SAVECATS = ["Bank ထဲ စုငွေ"];
 var DEF_BUD = [300000,200000,300000,150000,150000,100000,500000,100000,200000];
 
 function load(k,d){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
@@ -222,7 +226,8 @@ function applyUser(){
 function fmt(n){ return (n||0).toLocaleString("en-US"); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function msg(t,cls){ var m=document.getElementById("fMsg"); m.textContent=t; m.className=cls; }
-function isOut(e){ return e.type!=="in"; }
+function isOut(e){ return e.type!=="in" && e.type!=="save"; }
+function isSave(e){ return e.type==="save"; }
 
 function tab(i,btn){
   var secs=document.querySelectorAll("section"), btns=document.querySelectorAll("nav button");
@@ -239,7 +244,8 @@ function setType(t){
   entryType=t;
   document.getElementById("segOut").className = (t==="out")?"onOut":"";
   document.getElementById("segIn").className = (t==="in")?"onIn":"";
-  populateCats(t==="out"?CATS:INCATS);
+  document.getElementById("segSave").className = (t==="save")?"onSave":"";
+  populateCats(t==="out"?CATS:(t==="in"?INCATS:SAVECATS));
 }
 
 /* ---------- log ---------- */
@@ -254,12 +260,28 @@ function addExp(){
   save("tm_exps",exps);
   document.getElementById("fItem").value="";
   document.getElementById("fAmt").value="";
-  msg((entryType==="out"?"✓ ထွက်ငွေမှတ်ပြီး — ":"✓ ဝင်ငွေမှတ်ပြီး — ")+fmt(amt)+" ကျပ် ("+cat+")","ok");
+  if(entryType==="save"){
+    wealth.items.bank=(wealth.items.bank||0)+amt;
+    save("tm_wealth",wealth);
+    document.getElementById("wBank").value=wealth.items.bank;
+    msg("✓ စုငွေ "+fmt(amt)+" ကျပ် — ပိုက်ဆံအိတ် Bank ထဲ အလိုအလျောက် ထည့်ပြီးပြီ 🎉","ok");
+  } else if(entryType==="in"){
+    msg("✓ ဝင်ငွေမှတ်ပြီး — "+fmt(amt)+" ကျပ်။ 💡 မမေ့နဲ့ — စုငွေ အရင်ဖယ်ပြီး 💰 စု နဲ့မှတ်ပါ!","ok");
+  } else {
+    msg("✓ ထွက်ငွေမှတ်ပြီး — "+fmt(amt)+" ကျပ် ("+cat+")","ok");
+  }
   armDel=-1;
   render();
 }
 function delExp(i){
-  if(armDel===i){ exps.splice(i,1); save("tm_exps",exps); armDel=-1; }
+  if(armDel===i){
+    if(isSave(exps[i])){
+      wealth.items.bank=Math.max(0,(wealth.items.bank||0)-exps[i].amt);
+      save("tm_wealth",wealth);
+      document.getElementById("wBank").value=wealth.items.bank;
+    }
+    exps.splice(i,1); save("tm_exps",exps); armDel=-1;
+  }
   else { armDel=i; }
   render();
 }
@@ -322,7 +344,7 @@ function importJSON(inp){
 }
 function exportCSV(){
   var rows=[["ရက်စွဲ","ဝင်/ထွက်","အမျိုးအစား","အကြောင်းအရာ","ပမာဏ"]];
-  for(var i=0;i<exps.length;i++){ var e=exps[i]; rows.push([e.d,isOut(e)?"ထွက်":"ဝင်",e.cat,(e.item||"").replace(/,/g," "),e.amt]); }
+  for(var i=0;i<exps.length;i++){ var e=exps[i]; rows.push([e.d,isOut(e)?"ထွက်":(isSave(e)?"စု":"ဝင်"),e.cat,(e.item||"").replace(/,/g," "),e.amt]); }
   dl("expenses_"+todayStr()+".csv","﻿"+rows.map(function(r){return r.join(",");}).join("\n"),"text/csv;charset=utf-8");
 }
 
@@ -364,12 +386,13 @@ function drawCharts(){
 function render(){
   var month=document.getElementById("sMonth").value;
   var today=todayStr(), curMonth=today.slice(0,7);
-  var tToday=0,tMonth=0,tIn=0;
+  var tToday=0,tMonth=0,tIn=0,tSaveCur=0;
   var monthExps=[];
   for(var i=0;i<exps.length;i++){
     var e=exps[i];
     if(e.d.slice(0,7)===curMonth){
       if(isOut(e)){ tMonth+=e.amt; if(e.d===today) tToday+=e.amt; }
+      else if(isSave(e)) tSaveCur+=e.amt;
       else tIn+=e.amt;
       monthExps.push({e:e,idx:i});
     }
@@ -377,6 +400,19 @@ function render(){
   document.getElementById("todayTotal").textContent=fmt(tToday);
   document.getElementById("monthTotal").textContent=fmt(tMonth);
   document.getElementById("monthIn").textContent=fmt(tIn);
+
+  /* savings watch banner */
+  var sb=document.getElementById("saveBanner");
+  if(cfg.saveAmt>0){
+    sb.style.display="block";
+    if(tSaveCur>=cfg.saveAmt){
+      sb.style.background="#e8f6ee";
+      sb.innerHTML="<b style='color:#2e9e5b'>✅ ဒီလ စုငွေပြည့်ပြီ — "+fmt(tSaveCur)+" / "+fmt(cfg.saveAmt)+" ကျပ်</b>";
+    } else {
+      sb.style.background="#fff8e1";
+      sb.innerHTML="<b style='color:#b7791f'>⚠ ဒီလ စုငွေ — "+fmt(tSaveCur)+" / "+fmt(cfg.saveAmt)+" ကျပ်</b><div class='note'>ငွေဝင်ရင် သုံးတာမလုပ်ခင် 💰 စု နဲ့ အရင်ဖယ်ပါ။</div>";
+    }
+  } else { sb.style.display="none"; }
 
   monthExps.sort(function(a,b){ return a.e.d<b.e.d?1:(a.e.d>b.e.d?-1:0); });
   var tb=document.querySelector("#logTable tbody"), h="", lastDay="";
@@ -389,23 +425,24 @@ function render(){
       lastDay=e.d;
     }
     var armed=(armDel===idx);
-    var amtHtml=isOut(e)?fmt(e.amt):"<span class='pos'>+"+fmt(e.amt)+"</span>";
+    var amtHtml=isOut(e)?fmt(e.amt):(isSave(e)?"<span style='color:#1F4E79;font-weight:bold'>💰 "+fmt(e.amt)+"</span>":"<span class='pos'>+"+fmt(e.amt)+"</span>");
     h+="<tr><td>"+(e.item||"")+"</td><td style='font-size:12px;color:#777'>"+e.cat+"</td><td class='amt'>"+amtHtml+"</td><td><button class='del"+(armed?" arm":"")+"' onclick='delExp("+idx+")'>"+(armed?"ဖျက်မယ်!":"✕")+"</button></td></tr>";
   }
   tb.innerHTML=h||"<tr><td colspan='4' style='color:#999'>ဒီလအတွက် မှတ်တမ်းမရှိသေးပါ — အပေါ်ကနေ စမှတ်ပါ။</td></tr>";
 
   /* budget (expenses only, selected month) */
-  var spent={},tSpent=0,tInSel=0;
+  var spent={},tSpent=0,tInSel=0,tSaveSel=0;
   for(var i=0;i<CATS.length;i++) spent[CATS[i]]=0;
   for(var i=0;i<exps.length;i++){
     var e=exps[i];
     if(e.d.slice(0,7)===month){
       if(isOut(e)){ spent[e.cat]=(spent[e.cat]||0)+e.amt; tSpent+=e.amt; }
+      else if(isSave(e)) tSaveSel+=e.amt;
       else tInSel+=e.amt;
     }
   }
   var spendable=cfg.income-cfg.saveAmt;
-  document.getElementById("spendable").innerHTML="သုံးလို့ရတဲ့ငွေ — <b>"+fmt(spendable)+" ကျပ်</b> · ဒီလ တကယ်ဝင်ငွေ — <b class='pos'>"+fmt(tInSel)+" ကျပ်</b>";
+  document.getElementById("spendable").innerHTML="သုံးလို့ရတဲ့ငွေ — <b>"+fmt(spendable)+" ကျပ်</b> · ဝင်ငွေ — <b class='pos'>"+fmt(tInSel)+"</b> · စုပြီး — <b style='color:#1F4E79'>"+fmt(tSaveSel)+"</b>";
   var bb=document.querySelector("#budTable tbody"), bh="", tBud=0;
   for(var i=0;i<CATS.length;i++){
     var b=cfg.budgets[i]||0, s=spent[CATS[i]]||0, rem=b-s; tBud+=b;
