@@ -47,6 +47,9 @@
   .stat .num { font-size: 15px; font-weight: bold; color: #1F4E79; }
   .stat .num.grn { color: #2e9e5b; }
   .stat .lbl { font-size: 10px; color: #777; }
+  .bignum { font-size: 32px; font-weight: bold; color: #1F4E79; line-height: 1.4; }
+  .lbl2 { font-size: 12px; color: #777; }
+  .mini2 { margin-top: 8px; background: #eef3f9; border: none; border-radius: 8px; padding: 7px 16px; font-family: inherit; font-size: 12px; color: #1F4E79; cursor: pointer; font-weight: bold; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: #1F4E79; color: #fff; padding: 8px 6px; text-align: left; font-size: 12px; }
   td { padding: 8px 6px; border-bottom: 1px solid #eef1f5; vertical-align: top; }
@@ -95,12 +98,16 @@
 
 <!-- ============ TAB 0: DAILY LOG ============ -->
 <section class="on" id="s0">
-  <div class="stat">
-    <div class="card"><div class="num" id="todayTotal">0</div><div class="lbl">ဒီနေ့ထွက် (ကျပ်)</div></div>
-    <div class="card"><div class="num" id="monthTotal">0</div><div class="lbl">ဒီလထွက် (ကျပ်)</div></div>
-    <div class="card"><div class="num grn" id="monthIn">0</div><div class="lbl">ဒီလဝင် (ကျပ်)</div></div>
+  <div class="card" style="text-align:center">
+    <div class="lbl2">ဒီနေ့သုံးငွေ (ကျပ်)</div>
+    <div class="bignum" id="todayTotal">0</div>
+    <button class="mini2" id="mBtn" onclick="toggleMonth()">▼ ဒီလ အခြေအနေ</button>
+    <div class="stat" id="monthStats" style="display:none;margin-top:10px;margin-bottom:0">
+      <div class="card"><div class="num" id="monthTotal">0</div><div class="lbl">ဒီလထွက်</div></div>
+      <div class="card"><div class="num grn" id="monthIn">0</div><div class="lbl">ဒီလဝင်</div></div>
+      <div class="card"><div class="num" id="monthSave" style="color:#1F4E79">0</div><div class="lbl">ဒီလစု</div></div>
+    </div>
   </div>
-  <div class="card" id="saveBanner" style="display:none"></div>
   <div class="card">
     <h2>မှတ်မယ်</h2>
     <div class="seg">
@@ -137,6 +144,7 @@
     </div>
     <div class="note" id="spendable"></div>
   </div>
+  <div class="card" id="saveBanner" style="display:none"></div>
   <div class="card">
     <h2>သုံးငွေ ခွဲခြမ်းပုံ</h2>
     <div class="chartbox"><canvas id="pieC"></canvas></div>
@@ -144,8 +152,8 @@
   </div>
   <div class="card">
     <h2>Budget နဲ့ တကယ်သုံးတာ</h2>
-    <table id="budTable"><thead><tr><th>အမျိုးအစား</th><th style="text-align:right">Budget</th><th style="text-align:right">သုံးပြီး</th><th style="text-align:right">ကျန်</th></tr></thead><tbody></tbody></table>
-    <div class="note">Budget ကွက်ထဲ နှိပ်ပြီး ပြင်လို့ရတယ်။</div>
+    <table id="budTable"><thead><tr><th>အမျိုးအစား</th><th style="text-align:right">% → ကျပ်</th><th style="text-align:right">သုံးပြီး</th><th style="text-align:right">ကျန်</th></tr></thead><tbody></tbody></table>
+    <div class="note" id="budNote"></div>
   </div>
   <div class="card" id="verdict"></div>
 </section>
@@ -234,6 +242,12 @@ function tab(i,btn){
   for(var j=0;j<secs.length;j++){ secs[j].classList.toggle("on",j===i); btns[j].classList.toggle("on",j===i); }
   drawCharts();
 }
+function toggleMonth(){
+  var el=document.getElementById("monthStats"), b=document.getElementById("mBtn");
+  var show=(el.style.display==="none");
+  el.style.display=show?"flex":"none";
+  b.textContent=show?"▲ ပိတ်မယ်":"▼ ဒီလ အခြေအနေ";
+}
 
 function populateCats(list){
   var sel=document.getElementById("fCat");
@@ -292,8 +306,8 @@ function saveCfg(){
   cfg.saveAmt=parseInt(document.getElementById("sSave").value,10)||0;
   save("tm_cfg",cfg); render();
 }
-function setBud(i,el){
-  cfg.budgets[i]=parseInt(el.value,10)||0; save("tm_cfg",cfg); render();
+function setPct(i,el){
+  cfg.budPct[i]=parseFloat(el.value)||0; save("tm_cfg",cfg); render();
 }
 
 /* ---------- wealth ---------- */
@@ -400,6 +414,7 @@ function render(){
   document.getElementById("todayTotal").textContent=fmt(tToday);
   document.getElementById("monthTotal").textContent=fmt(tMonth);
   document.getElementById("monthIn").textContent=fmt(tIn);
+  document.getElementById("monthSave").textContent=fmt(tSaveCur);
 
   /* savings watch banner */
   var sb=document.getElementById("saveBanner");
@@ -443,16 +458,18 @@ function render(){
   }
   var spendable=cfg.income-cfg.saveAmt;
   document.getElementById("spendable").innerHTML="သုံးလို့ရတဲ့ငွေ — <b>"+fmt(spendable)+" ကျပ်</b> · ဝင်ငွေ — <b class='pos'>"+fmt(tInSel)+"</b> · စုပြီး — <b style='color:#1F4E79'>"+fmt(tSaveSel)+"</b>";
-  var bb=document.querySelector("#budTable tbody"), bh="", tBud=0;
+  var bb=document.querySelector("#budTable tbody"), bh="", tBud=0, tPct=0;
   for(var i=0;i<CATS.length;i++){
-    var b=cfg.budgets[i]||0, s=spent[CATS[i]]||0, rem=b-s; tBud+=b;
-    var pct=b>0?Math.min(100,Math.round(s/b*100)):(s>0?100:0);
-    bh+="<tr><td>"+CATS[i]+"<div class='bar'><i class='"+(s>b?"over":"")+"' style='width:"+pct+"%'></i></div></td>";
-    bh+="<td class='amt'><input type='number' class='mini' value='"+b+"' onchange='setBud("+i+",this)'></td>";
+    var pct=cfg.budPct[i]||0, b=Math.round(spendable*pct/100), s=spent[CATS[i]]||0, rem=b-s; tBud+=b; tPct+=pct;
+    var barPct=b>0?Math.min(100,Math.round(s/b*100)):(s>0?100:0);
+    bh+="<tr><td>"+CATS[i]+"<div class='bar'><i class='"+(s>b?"over":"")+"' style='width:"+barPct+"%'></i></div></td>";
+    bh+="<td class='amt'><input type='number' class='mini' style='width:56px' value='"+pct+"' onchange='setPct("+i+",this)'>%<div style='font-size:11px;color:#888'>"+fmt(b)+"</div></td>";
     bh+="<td class='amt'>"+fmt(s)+"</td><td class='amt "+(rem<0?"neg":"pos")+"'>"+fmt(rem)+"</td></tr>";
   }
-  bh+="<tr style='background:#eef3f9;font-weight:bold'><td>စုစုပေါင်း</td><td class='amt'>"+fmt(tBud)+"</td><td class='amt'>"+fmt(tSpent)+"</td><td class='amt "+((tBud-tSpent)<0?"neg":"pos")+"'>"+fmt(tBud-tSpent)+"</td></tr>";
+  var freePct=Math.round((100-tPct)*10)/10, freeAmt=spendable-tBud;
+  bh+="<tr style='background:#eef3f9;font-weight:bold'><td>စုစုပေါင်း ("+(Math.round(tPct*10)/10)+"%)</td><td class='amt'>"+fmt(tBud)+"</td><td class='amt'>"+fmt(tSpent)+"</td><td class='amt "+((tBud-tSpent)<0?"neg":"pos")+"'>"+fmt(tBud-tSpent)+"</td></tr>";
   bb.innerHTML=bh;
+  document.getElementById("budNote").textContent="% ပြင်ရင် ကျပ် အလိုအလျောက်တွက်ပေးတယ် · မခွဲရသေး — "+freePct+"% ("+fmt(freeAmt)+" ကျပ်)";
 
   var left=spendable-tSpent;
   var v=document.getElementById("verdict");
@@ -494,6 +511,7 @@ function initFields(){
   }
   if(mig) save("tm_exps",exps);
   if(!cfg.catsV3){ cfg.budgets=DEF_BUD.slice(); cfg.catsV3=true; save("tm_cfg",cfg); }
+  if(!cfg.budPct||cfg.budPct.length!==CATS.length){ cfg.budPct=[15,10,15,7,7,7,5,5,10]; save("tm_cfg",cfg); }
   if(!cfg.budgets||cfg.budgets.length!==CATS.length) cfg.budgets=DEF_BUD.slice();
   if(!wealth.items) wealth.items={bank:0,cash:0,gold:0,other:0};
   if(!wealth.snaps) wealth.snaps=[];
