@@ -456,6 +456,7 @@ function initFields(){
   initFields();
   if(user) applyUser(); else document.getElementById("setupOv").classList.add("show");
   render();
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(e){}); }
 })();
 </script>
 </body>
